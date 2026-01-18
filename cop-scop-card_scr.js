@@ -30,7 +30,8 @@ const clampNumber = (v, def) => {
   return Number.isFinite(n) ? n : def;
 };
 
-const normLang = (hass) => {
+const normLang = (hass, config) => {
+  if (config?.language && config.language !== "auto") return config.language;
   const l = String(hass?.language || "en").toLowerCase();
   if (l.startsWith("cs")) return "cs";
   return "en";
@@ -75,6 +76,10 @@ const STRINGS = {
     year_days: "Rok (dnů)",
     title: "Název",
     display: "Zobrazení",
+    language: "Jazyk",
+    lang_auto: "Auto (dle HA)",
+    lang_cs: "Čeština",
+    lang_en: "English",
   },
   en: {
     category: "Category",
@@ -114,11 +119,15 @@ const STRINGS = {
     year_days: "Year (days)",
     title: "Title",
     display: "Display",
+    language: "Language",
+    lang_auto: "Auto (HA)",
+    lang_cs: "Czech",
+    lang_en: "English",
   },
 };
 
-const t = (hass, key) => {
-  const lang = normLang(hass);
+const t = (hass, key, config) => {
+  const lang = normLang(hass, config);
   return (STRINGS[lang] && STRINGS[lang][key]) || STRINGS.en[key] || key;
 };
 
@@ -171,7 +180,7 @@ const sumChangeFromStats = (points) => {
 };
 
 const DEFAULT_CONFIG = {
-  title: "Tepelné čerpadlo – COP/SCOP",
+  title: "Tepelné čerpadlo – COP/SCOP", language: "auto",
   mode: "single", precision: 2, refresh_minutes: 60, month_days: 30, year_days: 365, show_classes: true, colorize_table_classes: true, class_mode: "custom",
   custom_class_thresholds: { ...DEFAULT_THRESHOLDS_CUSTOM }, class_colors: { ...DEFAULT_CLASS_COLORS }, class_labels: { ...DEFAULT_CLASS_LABELS },
   categories: [
@@ -288,7 +297,7 @@ class CopScopCard extends LitElement {
     if (this._data && (Date.now() - this._lastFetch) < refreshMs) return;
 
     const ids = this._getAllEntityIds();
-    if (ids.length === 0) { this._error = t(this.hass, "missing_cfg"); return; }
+    if (ids.length === 0) { this._error = t(this.hass, "missing_cfg", this._config); return; }
     
     this._loading = true; this._error = null;
     try {
@@ -338,14 +347,14 @@ class CopScopCard extends LitElement {
               <div class="tileTop"><div class="tileLabel">${(p.kind === "scop" ? "SCOP " : "COP ") + p.label}</div>${thresholds ? this._badge(pickClass(m.ratio, thresholds), true) : nothing}</div>
               <div class="value">${formatNum(m.ratio, prec)}</div>
               <div class="meta">
-                <div class="metaRow"><div>${t(this.hass, "produced")}:</div><div class="muted">${formatNum(m.produced_kwh, 2)} kWh</div></div>
-                <div class="metaRow"><div>${t(this.hass, "consumed")}:</div><div class="muted">${formatNum(m.consumed_kwh, 2)} kWh</div></div>
+                <div class="metaRow"><div>${t(this.hass, "produced", this._config)}:</div><div class="muted">${formatNum(m.produced_kwh, 2)} kWh</div></div>
+                <div class="metaRow"><div>${t(this.hass, "consumed", this._config)}:</div><div class="muted">${formatNum(m.consumed_kwh, 2)} kWh</div></div>
                 ${m.aux_total_kwh != null ? html`
                   ${cat.key === "total" ? html`
-                    <div class="metaRow"><div>${t(this.hass, "aux_from")} (Top):</div><div class="muted">${formatNum(m.aux1_kwh, 2)} kWh</div></div>
-                    <div class="metaRow"><div>${t(this.hass, "aux_from")} (TUV):</div><div class="muted">${formatNum(m.aux2_kwh, 2)} kWh</div></div>
-                  ` : html`<div class="metaRow"><div>${t(this.hass, "aux_from")}:</div><div class="muted">${formatNum(m.aux_total_kwh, 2)} kWh</div></div>`}
-                  <div class="metaRow"><div>${t(this.hass, "total_consumed")}:</div><div class="muted">${formatNum(m.consumed_total_kwh, 2)} kWh</div></div>
+                    <div class="metaRow"><div>${t(this.hass, "aux_from", this._config)} (Top):</div><div class="muted">${formatNum(m.aux1_kwh, 2)} kWh</div></div>
+                    <div class="metaRow"><div>${t(this.hass, "aux_from", this._config)} (TUV):</div><div class="muted">${formatNum(m.aux2_kwh, 2)} kWh</div></div>
+                  ` : html`<div class="metaRow"><div>${t(this.hass, "aux_from", this._config)}:</div><div class="muted">${formatNum(m.aux_total_kwh, 2)} kWh</div></div>`}
+                  <div class="metaRow"><div>${t(this.hass, "total_consumed", this._config)}:</div><div class="muted">${formatNum(m.consumed_total_kwh, 2)} kWh</div></div>
                 ` : nothing}
               </div>
             </div>
@@ -364,12 +373,12 @@ class CopScopCard extends LitElement {
     return html`
       <ha-card>
         <div class="card">
-          <div class="header"><div class="title">${this._config.title}</div><div class="muted">${this._loading ? t(this.hass, "loading") : ""}</div></div>
-          ${(this._config.mode === "single" && enabled.length > 1) ? html`<div class="row"><div>${t(this.hass, "category")}:</div><select @change=${(e) => this._selectedKey = e.target.value} .value=${this._selectedKey}>${enabled.map(c => html`<option value=${c.key}>${c.name}</option>`)}</select></div>` : nothing}
+          <div class="header"><div class="title">${this._config.title}</div><div class="muted">${this._loading ? t(this.hass, "loading", this._config) : ""}</div></div>
+          ${(this._config.mode === "single" && enabled.length > 1) ? html`<div class="row"><div>${t(this.hass, "category", this._config)}:</div><select @change=${(e) => this._selectedKey = e.target.value} .value=${this._selectedKey}>${enabled.map(c => html`<option value=${c.key}>${c.name}</option>`)}</select></div>` : nothing}
           ${this._config.mode === "single" ? (cat ? this._renderTilesForCategory(cat) : nothing) : html`
             <div class="tableWrap">
               <table class="table">
-                <thead><tr><th class="colCat">${t(this.hass, "category")}</th>${PERIODS.map(p => html`<th class="colPeriodHeader" colspan="2">${(p.kind === "scop" ? "SCOP " : "COP ") + p.label}</th>`)}</tr></thead>
+                <thead><tr><th class="colCat">${t(this.hass, "category", this._config)}</th>${PERIODS.map(p => html`<th class="colPeriodHeader" colspan="2">${(p.kind === "scop" ? "SCOP " : "COP ") + p.label}</th>`)}</tr></thead>
                 <tbody>${enabled.map(c => { const m = this._data?.categories?.[c.key]; return html`<tr><td>${c.name}</td>${PERIODS.map(p => html`<td class="colVal"><span class="cellVal">${formatNum(m?.periods?.[p.key]?.ratio, this._config.precision)}</span></td><td class="colCls"><span class="badgeCell">${thresholds ? this._badge(pickClass(m?.periods?.[p.key]?.ratio, thresholds), !!this._config.colorize_table_classes) : nothing}</span></td>`)}</tr>`; })}</tbody>
               </table>
             </div>
@@ -408,31 +417,32 @@ class CopScopCardEditor extends LitElement {
     return html`
       <div class="wrap">
         <div class="box">
-          <div class="head">${t(this.hass, "display")}</div>
+          <div class="head">${t(this.hass, "display", this._config)}</div>
           <ha-form .hass=${this.hass} .data=${this._config} .schema=${[
             { name: "title", selector: { text: {} } },
-            { name: "mode", selector: { select: { mode: "dropdown", options: [{ value: "single", label: t(this.hass, "mode_single") }, { value: "table", label: t(this.hass, "mode_table") }] } } },
+            { name: "language", selector: { select: { mode: "dropdown", options: [{ value: "auto", label: t(this.hass, "lang_auto", this._config) }, { value: "cs", label: t(this.hass, "lang_cs", this._config) }, { value: "en", label: t(this.hass, "lang_en", this._config) }] } } },
+            { name: "mode", selector: { select: { mode: "dropdown", options: [{ value: "single", label: t(this.hass, "mode_single", this._config) }, { value: "table", label: t(this.hass, "mode_table", this._config) }] } } },
             { name: "precision", selector: { number: { min: 0, max: 4, step: 1, mode: "box" } } },
             { name: "refresh_minutes", selector: { number: { min: 5, max: 240, step: 5, mode: "box" } } },
             { name: "show_classes", selector: { boolean: {} } },
             { name: "colorize_table_classes", selector: { boolean: {} } },
-            { name: "class_mode", selector: { select: { mode: "dropdown", options: [{ value: "none", label: t(this.hass, "class_none") }, { value: "custom", label: t(this.hass, "class_custom") }, { value: "eu_space_heating", label: t(this.hass, "class_eu") }, { value: "eu_space_heating_lowtemp", label: t(this.hass, "class_eu_lt") }] } } },
+            { name: "class_mode", selector: { select: { mode: "dropdown", options: [{ value: "none", label: t(this.hass, "class_none", this._config) }, { value: "custom", label: t(this.hass, "class_custom", this._config) }, { value: "eu_space_heating", label: t(this.hass, "class_eu", this._config) }, { value: "eu_space_heating_lowtemp", label: t(this.hass, "class_eu_lt", this._config) }] } } },
           ]} @value-changed=${(e) => fireEvent(this, "config-changed", { config: e.detail.value })}></ha-form>
         </div>
-        ${(this._config.show_classes && this._config.class_mode === "custom") ? html`<div class="box"><div class="head">${t(this.hass, "thresholds")}</div><div class="grid3">${classKeys.map(k => html`<ha-number-input .label=${k} .value=${this._config.custom_class_thresholds[k]} .min=${0} .max=${20} .step=${0.01} @value-changed=${(e) => this._setThreshold(k, e.detail.value)}></ha-number-input>`)}</div></div>` : nothing}
+        ${(this._config.show_classes && this._config.class_mode === "custom") ? html`<div class="box"><div class="head">${t(this.hass, "thresholds", this._config)}</div><div class="grid3">${classKeys.map(k => html`<ha-number-input .label=${k} .value=${this._config.custom_class_thresholds[k]} .min=${0} .max=${20} .step=${0.01} @value-changed=${(e) => this._setThreshold(k, e.detail.value)}></ha-number-input>`)}</div></div>` : nothing}
         <div class="box">
-          <div class="head">${t(this.hass, "category")}</div>
+          <div class="head">${t(this.hass, "category", this._config)}</div>
           ${(this._config.categories || []).map((c, idx) => html`
             <div class="catBox">
               <b>${c.key.toUpperCase()}</b>
               <ha-form .hass=${this.hass} .data=${c} .schema=${[
-                { name: "name", label: t(this.hass, "name"), selector: { text: {} } },
-                { name: "enabled", label: t(this.hass, "enabled"), selector: { boolean: {} } },
-                { name: "produced_entity", label: t(this.hass, "produced_entity"), selector: { entity: {} } },
-                { name: "consumed_entity", label: t(this.hass, "consumed_entity"), selector: { entity: {} } },
-                { name: "aux_entity", label: t(this.hass, "add_aux"), selector: { entity: {} } },
-                ...(c.key === "total" ? [{ name: "aux_entity2", label: t(this.hass, "add_aux2"), selector: { entity: {} } }] : []),
-                { name: "aux_included", label: t(this.hass, "aux_included"), selector: { boolean: {} } },
+                { name: "name", label: t(this.hass, "name", this._config), selector: { text: {} } },
+                { name: "enabled", label: t(this.hass, "enabled", this._config), selector: { boolean: {} } },
+                { name: "produced_entity", label: t(this.hass, "produced_entity", this._config), selector: { entity: {} } },
+                { name: "consumed_entity", label: t(this.hass, "consumed_entity", this._config), selector: { entity: {} } },
+                { name: "aux_entity", label: t(this.hass, "add_aux", this._config), selector: { entity: {} } },
+                ...(c.key === "total" ? [{ name: "aux_entity2", label: t(this.hass, "add_aux2", this._config), selector: { entity: {} } }] : []),
+                { name: "aux_included", label: t(this.hass, "aux_included", this._config), selector: { boolean: {} } },
               ]} @value-changed=${(e) => this._setCategory(idx, e.detail.value)}></ha-form>
               <div class="hr"></div>
             </div>
