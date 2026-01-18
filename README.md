@@ -1,7 +1,10 @@
 # COP/SCOP Card
 
-[![hacs_badge](https://img.shields.io/badge/HACS-Custom-41BDF5.svg?style=for-the-badge)](https://github.com/hacs/integration)
-[![GitHub Release](https://img.shields.io/github/v/release/VitisEK/cop-scop-card?style=for-the-badge)](https://github.com/VitisEK/cop-scop-card/releases)
+[![](https://img.shields.io/github/release/VitisEK/cop-scop-card/all.svg?style=for-the-badge)](https://github.com/VitisEK/cop-scop-card/releases)
+[![hacs_badge](https://img.shields.io/badge/HACS-Default-41BDF5.svg?style=for-the-badge)](https://github.com/hacs/integration)
+[![](https://img.shields.io/github/license/VitisEK/cop-scop-card?style=for-the-badge)](LICENSE)
+[![](https://img.shields.io/badge/MAINTAINER-%40VitisEK-red?style=for-the-badge)](https://github.com/VitisEK)
+[![](https://img.shields.io/badge/COMMUNITY-FORUM-success?style=for-the-badge)](https://community.home-assistant.io)
 
 A custom Lovelace card for Home Assistant that calculates and displays **COP** (Coefficient of Performance) and **SCOP** (Seasonal Coefficient of Performance) for heat pumps.
 
@@ -44,6 +47,152 @@ It uses Home Assistant's **Long-Term Statistics** to calculate efficiency over d
     *   URL: `/local/cop-scop-card.js`
     *   Type: `JavaScript Module`
 
+## Usage
+
+### Basic (single category)
+
+```yaml
+type: custom:cop-scop-card
+title: Heat Pump - COP/SCOP
+mode: single
+categories:
+  - key: heating
+    name: Heating
+    enabled: true
+    produced_entity: sensor.hp_heat_produced
+    consumed_entity: sensor.hp_heat_consumed
+```
+
+### Table overview (multiple categories)
+
+```yaml
+type: custom:cop-scop-card
+title: Heat Pump Overview
+mode: table
+categories:
+  - key: heating
+    name: Heating
+    enabled: true
+    produced_entity: sensor.hp_heat_produced
+    consumed_entity: sensor.hp_heat_consumed
+  - key: dhw
+    name: Hot Water
+    enabled: true
+    produced_entity: sensor.hp_dhw_produced
+    consumed_entity: sensor.hp_dhw_consumed
+  - key: cooling
+    name: Cooling
+    enabled: false
+    produced_entity: sensor.hp_cooling_produced
+    consumed_entity: sensor.hp_cooling_consumed
+  - key: total
+    name: Total
+    enabled: true
+    produced_entity: sensor.hp_total_produced
+    consumed_entity: sensor.hp_total_consumed
+```
+
+### With auxiliary heater (separate entity)
+
+```yaml
+type: custom:cop-scop-card
+title: Heat Pump + Aux
+mode: single
+categories:
+  - key: heating
+    name: Heating
+    enabled: true
+    produced_entity: sensor.hp_heat_produced
+    consumed_entity: sensor.hp_heat_consumed
+    aux_entity: sensor.aux_heater_energy
+    aux_included: false
+```
+
+### Total with two aux entities
+
+```yaml
+type: custom:cop-scop-card
+title: Total Including Aux
+mode: single
+categories:
+  - key: total
+    name: Total
+    enabled: true
+    produced_entity: sensor.hp_total_produced
+    consumed_entity: sensor.hp_total_consumed
+    aux_entity: sensor.aux_heater_heating_energy
+    aux_entity2: sensor.aux_heater_dhw_energy
+    aux_included: false
+```
+
+### EU class mode (space heating)
+
+```yaml
+type: custom:cop-scop-card
+title: EU Classes
+mode: table
+show_classes: true
+class_mode: eu_space_heating
+categories:
+  - key: heating
+    name: Heating
+    enabled: true
+    produced_entity: sensor.hp_heat_produced
+    consumed_entity: sensor.hp_heat_consumed
+```
+
+### Custom thresholds and colors
+
+```yaml
+type: custom:cop-scop-card
+title: Custom Classes
+show_classes: true
+class_mode: custom
+custom_class_thresholds:
+  A+++: 4.7
+  A++: 4.2
+  A+: 3.6
+  A: 3.1
+  B: 2.6
+  C: 2.2
+  D: 1.9
+  E: 1.6
+  F: 1.3
+  G: 0.0
+class_colors:
+  A+++: '#00c853'
+  A++: '#64dd17'
+  A+: '#cddc39'
+  A: '#ffeb3b'
+  B: '#ffc107'
+  C: '#ff9800'
+  D: '#ff5722'
+  E: '#f44336'
+  F: '#d32f2f'
+  G: '#9e9e9e'
+categories:
+  - key: heating
+    name: Heating
+    enabled: true
+    produced_entity: sensor.hp_heat_produced
+    consumed_entity: sensor.hp_heat_consumed
+```
+
+### Custom month/year ranges
+
+```yaml
+type: custom:cop-scop-card
+title: Custom Periods
+month_days: 21
+year_days: 300
+categories:
+  - key: heating
+    name: Heating
+    enabled: true
+    produced_entity: sensor.hp_heat_produced
+    consumed_entity: sensor.hp_heat_consumed
+```
+
 ## Configuration
 
 The card supports the visual editor. Simply add the "COP/SCOP Card" to your dashboard and configure it via the UI.
@@ -73,7 +222,6 @@ categories:
   - key: total
     name: Total
     enabled: true
-    produced_entity: sensor.heat_pump_total_energy_produced
     consumed_entity: sensor.heat_pump_total_energy_consumed
     aux_entity: sensor.aux_heater_heating_energy # e.g. aux for heating
     aux_entity2: sensor.aux_heater_dhw_energy # e.g. aux for DHW
@@ -81,5 +229,5 @@ categories:
 
 ## Support
 
-Pokud narazíte na problém nebo máte nápad na vylepšení, prosím otevřete [Issue](https://github.com/[Uzivatel]/[Repozitar]/issues) zde na GitHubu.
-
+If you run into issues or have a feature request, please open an issue here:
+https://github.com/VitisEK/cop-scop-card/issues
