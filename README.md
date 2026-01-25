@@ -4,6 +4,7 @@
 [![hacs_badge](https://img.shields.io/badge/HACS-Default-41BDF5.svg?style=for-the-badge)](https://github.com/hacs/integration)
 [![](https://img.shields.io/github/license/VitisEK/cop-scop-card?style=for-the-badge)](LICENSE)
 [![](https://img.shields.io/badge/MAINTAINER-%40VitisEK-red?style=for-the-badge)](https://github.com/VitisEK)
+[![GitHub Sponsors](https://img.shields.io/badge/Sponsor-GitHub%20Sponsors-EA4AAA?logo=githubsponsors&logoColor=white)](https://github.com/sponsors/VitisEK)
 [![](https://img.shields.io/badge/COMMUNITY-FORUM-success?style=for-the-badge)](https://community.home-assistant.io)
 
 A custom Lovelace card for Home Assistant that calculates and displays **COP** (Coefficient of Performance) and **SCOP** (Seasonal Coefficient of Performance) for heat pumps.
