@@ -1,4 +1,302 @@
-const CSC_VERSION="1.4.0";let Lit,__litFromCDN=!1;try{Lit=await import("lit")}catch{Lit=await import("https://cdn.jsdelivr.net/npm/lit@3/+esm"),__litFromCDN=!0}const{LitElement:e,html:a,css:s,nothing:i}=Lit;console.info(`[CSC] COP/SCOP Card v1.4.0 loaded (Lit: ${__litFromCDN?"CDN":"local"})`);const fireEvent=(e,a,s={})=>{let i=new Event(a,{bubbles:!0,composed:!0,cancelable:!1});return i.detail=s,e.dispatchEvent(i),i},clampNumber=(e,a)=>{let s=Number(e);return Number.isFinite(s)?s:a},normLang=(e,a)=>{if(a?.language&&"auto"!==a.language)return a.language;let s=String(e?.language||"en").toLowerCase();return s.startsWith("cs")?"cs":"en"},STRINGS={cs:{category:"Kategorie",cop:"COP",scop:"SCOP",produced:"Δv\xfdroba",consumed:"Δspotřeba",aux_from:"z toho př\xeddavn\xe9 topen\xed",aux_heating:"topen\xed",aux_dhw:"TUV",aux_total:"př\xeddavn\xe9 (celkem)",total_consumed:"Δspotřeba celkem",missing_cfg:"Chyb\xed konfigurace – nastav kategorie v editoru.",loading:"Nač\xedt\xe1m…",stats_warn:"Nepodařilo se z\xedskat statistiky pro někter\xe9 entity. Zkontroluj long-term statistics (state_class total/total_increasing, device_class energy).",mode_single:"Single",mode_table:"Table",show_class:"Zobrazovat energetickou tř\xeddu",colorize_table:"Barvit tř\xeddy v tabulce",class_mode:"Režim tř\xedd",class_custom:"Custom (prahy COP/SCOP)",class_none:"None",class_eu:"EU space heating (orientačně)",class_eu_lt:"EU space heating LOW-TEMP (orientačně)",thresholds:"Prahy tř\xedd (min COP/SCOP)",class_style:"Styl tř\xedd (text + barva)",add_aux:"Př\xeddavn\xe9 topen\xed – entita",add_aux2:"Př\xeddavn\xe9 topen\xed #2 – entita",aux_included:"Př\xeddavn\xe9 topen\xed je již zahrnuto ve spotřebě",produced_entity:"V\xfdroba – entita",consumed_entity:"Spotřeba – entita",produced_scale:"V\xfdroba – scale override do kWh",consumed_scale:"Spotřeba – scale override do kWh",aux_scale:"Aux #1 – scale override do kWh",aux2_scale:"Aux #2 – scale override do kWh",unit_warning:"Někter\xe9 entity maj\xed nepodporovanou jednotku. Nastav ručně scale override do kWh.",enabled:"Povoleno",name:"N\xe1zev",refresh:"Refresh (min)",precision:"Desetinn\xe1 m\xedsta",month_days:"Měs\xedc (dnů)",year_days:"Rok (dnů)",title:"N\xe1zev",display:"Zobrazen\xed",language:"Jazyk",lang_auto:"Auto (dle HA)",lang_cs:"Čeština",lang_en:"English"},en:{category:"Category",cop:"COP",scop:"SCOP",produced:"Δproduced",consumed:"Δconsumed",aux_from:"of which aux heater",aux_heating:"heating",aux_dhw:"DHW",aux_total:"aux (total)",total_consumed:"Δconsumed total",missing_cfg:"Missing config – set categories in the editor.",loading:"Loading…",stats_warn:"Unable to fetch statistics for some entities.",mode_single:"Single",mode_table:"Table",show_class:"Show energy class",colorize_table:"Colorize classes in table",class_mode:"Class mode",class_custom:"Custom (COP/SCOP thresholds)",class_none:"None",class_eu:"EU space heating (approx.)",class_eu_lt:"EU space heating LOW-TEMP (approx.)",thresholds:"Class thresholds (min COP/SCOP)",class_style:"Class style (label + color)",add_aux:"Aux heater – entity",add_aux2:"Aux heater #2 – entity",aux_included:"Aux heater already included in consumption",produced_entity:"Produced – entity",consumed_entity:"Consumed – entity",produced_scale:"Produced scale override to kWh",consumed_scale:"Consumed scale override to kWh",aux_scale:"Aux #1 scale override to kWh",aux2_scale:"Aux #2 scale override to kWh",unit_warning:"Some entities use an unsupported unit. Set a manual scale override to kWh.",enabled:"Enabled",name:"Name",refresh:"Refresh (min)",precision:"Decimals",month_days:"Month (days)",year_days:"Year (days)",title:"Title",display:"Display",language:"Language",lang_auto:"Auto (HA)",lang_cs:"Czech",lang_en:"English"}},t=(e,a,s)=>{let i=normLang(e,s);return STRINGS[i]&&STRINGS[i][a]||STRINGS.en[a]||a},DEFAULT_THRESHOLDS_CUSTOM={"A+++":4.5,"A++":4,"A+":3.5,A:3,B:2.7,C:2.4,D:2.1,E:1.8,F:1.5,G:0},DEFAULT_CLASS_COLORS={"A+++":"#00c853","A++":"#64dd17","A+":"#cddc39",A:"#ffeb3b",B:"#ffc107",C:"#ff9800",D:"#ff5722",E:"#f44336",F:"#d32f2f",G:"#9e9e9e"},DEFAULT_CLASS_LABELS={"A+++":"A+++","A++":"A++","A+":"A+",A:"A",B:"B",C:"C",D:"D",E:"E",F:"F",G:"G"},CC_EU=2.5,EU_TABLE1_ETA_S={"A+++":150,"A++":125,"A+":98,A:90,B:82,C:75,D:36,E:34,F:30,G:0},EU_TABLE2_ETA_S={"A+++":175,"A++":150,"A+":123,A:115,B:107,C:100,D:61,E:59,F:55,G:0},etaToScopThresholds=e=>{let a={};return Object.keys(e).forEach(s=>{a[s]=2.5*e[s]/100}),a},pickClass=(e,a)=>{if(!Number.isFinite(e)||!a)return null;let s=Object.entries(a).map(([e,a])=>[e,Number(a)]).filter(([,e])=>Number.isFinite(e)).sort((e,a)=>a[1]-e[1]);for(let[i,o]of s)if(e>=o)return i;return null},formatNum=(e,a)=>null!=e&&Number.isFinite(e)?Number(e).toFixed(a):"—",ENERGY_UNIT_FACTORS={wh:.001,kwh:1,mwh:1e3},normalizeEnergyUnit=e=>String(e||"").trim().toLowerCase().replace(/\s+/g,""),parseScaleOverride=e=>{if(""===e||null==e)return null;let a=Number(e);return Number.isFinite(a)&&a>0?a:null},scaleToKwh=(e,a)=>null!=e&&Number.isFinite(e)?e*a:e,PERIODS=[{key:"day",label:"24h",kind:"cop",days:1,group:"hour"},{key:"week",label:"7d",kind:"cop",days:7,group:"day"},{key:"month",label:"30d",kind:"cop",daysCfg:"month_days",group:"day"},{key:"year",label:"365d",kind:"scop",daysCfg:"year_days",group:"day"},],periodStart=(e,a,s)=>{let i=s.daysCfg?clampNumber(a[s.daysCfg],"month"===s.key?30:365):s.days;return new Date(e.getTime()-864e5*i)},sumChangeFromStats=e=>{if(!Array.isArray(e)||0===e.length)return null;let a=!1,s=0;for(let i of e)i&&null!=i.change&&(a=!0,s+=Number(i.change));if(a)return s;let o=e[0],l=e[e.length-1],n=o?.sum??o?.state,r=l?.sum??l?.state,c=Number(n),d=Number(r);return Number.isFinite(c)&&Number.isFinite(d)?d-c:null},DEFAULT_CONFIG={title:"Tepeln\xe9 čerpadlo – COP/SCOP",language:"auto",mode:"single",precision:2,refresh_minutes:60,month_days:30,year_days:365,show_classes:!0,colorize_table_classes:!0,class_mode:"custom",custom_class_thresholds:{...DEFAULT_THRESHOLDS_CUSTOM},class_colors:{...DEFAULT_CLASS_COLORS},class_labels:{...DEFAULT_CLASS_LABELS},categories:[{key:"dhw",name:"TUV",enabled:!0,produced_entity:"",consumed_entity:"",aux_entity:"",aux_included:!1,produced_scale:null,consumed_scale:null,aux_scale:null},{key:"heating",name:"Topen\xed",enabled:!0,produced_entity:"",consumed_entity:"",aux_entity:"",aux_included:!1,produced_scale:null,consumed_scale:null,aux_scale:null},{key:"cooling",name:"Chlazen\xed",enabled:!0,produced_entity:"",consumed_entity:"",aux_entity:"",aux_included:!1,produced_scale:null,consumed_scale:null,aux_scale:null},{key:"total",name:"Celkem",enabled:!0,produced_entity:"",consumed_entity:"",aux_entity:"",aux_entity2:"",aux_included:!1,produced_scale:null,consumed_scale:null,aux_scale:null,aux2_scale:null},]};class CopScopCard extends e{static get properties(){return{hass:{},_config:{state:!0},_data:{state:!0},_error:{state:!0},_warning:{state:!0},_loading:{state:!0},_lastFetch:{state:!0},_selectedKey:{state:!0},_w:{state:!0}}}static getConfigElement(){return document.createElement("cop-scop-card-editor")}static getStubConfig(){return{...DEFAULT_CONFIG}}static styles=s`
+// /config/www/cop-scop-card.js
+// COP/SCOP Card – LTS stats + GUI editor + aux heater + responsive table
+// v1.4.0 - Added automatic unit normalization to kWh + manual scale overrides
+// v.1.4.1 - Added german translation and improved language selection; fixed translation strings, ...
+
+/* eslint-disable no-console */
+
+const CSC_VERSION = "1.4.1";
+
+// --- Lit loader with CDN fallback ---
+let Lit, __litFromCDN = false;
+try { Lit = await import("lit"); }
+catch {
+  Lit = await import("https://cdn.jsdelivr.net/npm/lit@3/+esm");
+  __litFromCDN = true;
+}
+const { LitElement, html, css, nothing } = Lit;
+
+console.info(`[CSC] COP/SCOP Card v${CSC_VERSION} loaded (Lit: ${__litFromCDN ? "CDN" : "local"})`);
+
+// -------------------- helpers --------------------
+const fireEvent = (node, type, detail = {}) => {
+  const ev = new Event(type, { bubbles: true, composed: true, cancelable: false });
+  ev.detail = detail;
+  node.dispatchEvent(ev);
+  return ev;
+};
+
+const clampNumber = (v, def) => {
+  const n = Number(v);
+  return Number.isFinite(n) ? n : def;
+};
+
+const normLang = (hass, config) => {
+  if (config?.language && config.language !== "auto") return config.language;
+  const l = String(hass?.language || "en").toLowerCase();
+  if (l.startsWith("cs")) return "cs";
+  if (l.startsWith("de")) return "de";
+  return "en";
+};
+
+const STRINGS = {
+  de: {
+    category: "Kategorie",
+    cop: "COP",
+    scop: "SCOP",
+    produced: "Δ Wärme produziert",
+    consumed: "Δ Strom bezogen",
+    aux_from: "davon Zusatzheizung",
+    aux_heating: "Heizung",
+    aux_dhw: "Warmwasser",
+    aux_total: "Zusatz (gesamt)",
+    total_consumed: "Δ Strom gesamt",
+    missing_cfg: "Keine Konfiguration – Kategorien im Editor festlegen.",
+    loading: "Lade…",
+    stats_warn: "Statistiken für einige Entities nicht verfügbar. Bitte Langzeitstatistiken prüfen (state_class total/total_increasing, device_class energy).",
+    mode_label: "Darstellungsmodus",
+    mode_single: "Einzeln",
+    mode_table: "Tabelle",
+    show_class: "Energieklasse anzeigen",
+    colorize_table: "Klassen in Tabelle einfärben",
+    class_mode: "Klassenmodus",
+    class_custom: "Benutzerdefiniert (COP/SCOP-Schwellwerte)",
+    class_none: "Keine",
+    class_eu: "EU Raumheizung (orientativ)",
+    class_eu_lt: "EU Raumheizung NIEDRIGTEMP (orientativ)",
+    thresholds: "Klassenschwellwerte (min COP/SCOP)",
+    class_style: "Klassenstil (Bezeichnung + Farbe)",
+    add_aux: "Zusatzheizung – Entity",
+    add_aux2: "Zusatzheizung #2 – Entity",
+    aux_included: "Zusatzheizung bereits im Verbrauch enthalten",
+    produced_entity: "Erzeugte Wärme – Entity",
+    consumed_entity: "Stromverbrauch – Entity",
+    produced_scale: "Wärme – Skalierung nach kWh",
+    consumed_scale: "Strom – Skalierung nach kWh",
+    aux_scale: "Zusatz #1 – Skalierung nach kWh",
+    aux2_scale: "Zusatz #2 – Skalierung nach kWh",
+    unit_warning: "Einige Entities haben eine nicht unterstützte Einheit. Bitte Skalierung nach kWh manuell festlegen.",
+    enabled: "Aktiviert",
+    name: "Name",
+    refresh: "Aktualisierung (Min)",
+    precision: "Nachkommastellen",
+    month_days: "Monat (Tage)",
+    year_days: "Jahr (Tage)",
+    title: "Titel",
+    display: "Anzeige",
+    language: "Sprache",
+    lang_auto: "Automatisch (HA)",
+    lang_cs: "Tschechisch",
+    lang_en: "Englisch",
+    lang_de: "Deutsch",
+    cat_dhw: "Warmwasser",
+    cat_heating: "Heizung",
+    cat_cooling: "Kühlung",
+    cat_total: "Gesamt",
+  },
+  cs: {
+    category: "Kategorie",
+    cop: "COP",
+    scop: "SCOP",
+    produced: "Δvýroba",
+    consumed: "Δspotřeba",
+    aux_from: "z toho přídavné topení",
+    aux_heating: "topení",
+    aux_dhw: "TUV",
+    aux_total: "přídavné (celkem)",
+    total_consumed: "Δspotřeba celkem",
+    missing_cfg: "Chybí konfigurace – nastav kategorie v editoru.",
+    loading: "Načítám…",
+    stats_warn: "Nepodařilo se získat statistiky pro některé entity. Zkontroluj long-term statistics (state_class total/total_increasing, device_class energy).",
+    mode_label: "Režim zobrazení",
+    mode_label: "Display mode",
+    mode_single: "Single",
+    mode_table: "Table",
+    show_class: "Zobrazovat energetickou třídu",
+    colorize_table: "Barvit třídy v tabulce",
+    class_mode: "Režim tříd",
+    class_custom: "Custom (prahy COP/SCOP)",
+    class_none: "None",
+    class_eu: "EU space heating (orientačně)",
+    class_eu_lt: "EU space heating LOW-TEMP (orientačně)",
+    thresholds: "Prahy tříd (min COP/SCOP)",
+    class_style: "Styl tříd (text + barva)",
+    add_aux: "Přídavné topení – entita",
+    add_aux2: "Přídavné topení #2 – entita",
+    aux_included: "Přídavné topení je již zahrnuto ve spotřebě",
+    produced_entity: "Výroba – entita",
+    consumed_entity: "Spotřeba – entita",
+    produced_scale: "Výroba – scale override do kWh",
+    consumed_scale: "Spotřeba – scale override do kWh",
+    aux_scale: "Aux #1 – scale override do kWh",
+    aux2_scale: "Aux #2 – scale override do kWh",
+    unit_warning: "Některé entity mají nepodporovanou jednotku. Nastav ručně scale override do kWh.",
+    enabled: "Povoleno",
+    name: "Název",
+    refresh: "Refresh (min)",
+    precision: "Desetinná místa",
+    month_days: "Měsíc (dnů)",
+    year_days: "Rok (dnů)",
+    title: "Název",
+    display: "Zobrazení",
+    language: "Jazyk",
+    lang_auto: "Auto (dle HA)",
+    lang_cs: "Čeština",
+    lang_en: "English",
+    lang_de: "Deutsch",
+    cat_dhw: "TUV",
+    cat_heating: "Topení",
+    cat_cooling: "Chlazení",
+    cat_total: "Celkem",
+  },
+  en: {
+    category: "Category",
+    cop: "COP",
+    scop: "SCOP",
+    produced: "Δproduced",
+    consumed: "Δconsumed",
+    aux_from: "of which aux heater",
+    aux_heating: "heating",
+    aux_dhw: "DHW",
+    aux_total: "aux (total)",
+    total_consumed: "Δconsumed total",
+    missing_cfg: "Missing config – set categories in the editor.",
+    loading: "Loading…",
+    stats_warn: "Unable to fetch statistics for some entities.",
+    mode_label: "Režim zobrazení",
+    mode_label: "Display mode",
+    mode_single: "Single",
+    mode_table: "Table",
+    show_class: "Show energy class",
+    colorize_table: "Colorize classes in table",
+    class_mode: "Class mode",
+    class_custom: "Custom (COP/SCOP thresholds)",
+    class_none: "None",
+    class_eu: "EU space heating (approx.)",
+    class_eu_lt: "EU space heating LOW-TEMP (approx.)",
+    thresholds: "Class thresholds (min COP/SCOP)",
+    class_style: "Class style (label + color)",
+    add_aux: "Aux heater – entity",
+    add_aux2: "Aux heater #2 – entity",
+    aux_included: "Aux heater already included in consumption",
+    produced_entity: "Produced – entity",
+    consumed_entity: "Consumed – entity",
+    produced_scale: "Produced scale override to kWh",
+    consumed_scale: "Consumed scale override to kWh",
+    aux_scale: "Aux #1 scale override to kWh",
+    aux2_scale: "Aux #2 scale override to kWh",
+    unit_warning: "Some entities use an unsupported unit. Set a manual scale override to kWh.",
+    enabled: "Enabled",
+    name: "Name",
+    refresh: "Refresh (min)",
+    precision: "Decimals",
+    month_days: "Month (days)",
+    year_days: "Year (days)",
+    title: "Title",
+    display: "Display",
+    language: "Language",
+    lang_auto: "Auto (HA)",
+    lang_cs: "Czech",
+    lang_en: "English",
+    lang_de: "German",
+    cat_dhw: "DHW",
+    cat_heating: "Heating",
+    cat_cooling: "Cooling",
+    cat_total: "Total",
+  },
+};
+
+const t = (hass, key, config) => {
+  const lang = normLang(hass, config);
+  return (STRINGS[lang] && STRINGS[lang][key]) || STRINGS.en[key] || key;
+};
+
+const resolveName = (hass, config, name) => {
+  if (name && name.startsWith("__cat_")) {
+    const key = name.slice(2);
+    return t(hass, key, config) || name;
+  }
+  return name;
+};
+
+// -------------------- default config --------------------
+const DEFAULT_THRESHOLDS_CUSTOM = { "A+++": 4.5, "A++": 4.0, "A+": 3.5, "A": 3.0, "B": 2.7, "C": 2.4, "D": 2.1, "E": 1.8, "F": 1.5, "G": 0.0 };
+const DEFAULT_CLASS_COLORS = { "A+++": "#00c853", "A++": "#64dd17", "A+": "#cddc39", "A": "#ffeb3b", "B": "#ffc107", "C": "#ff9800", "D": "#ff5722", "E": "#f44336", "F": "#d32f2f", "G": "#9e9e9e" };
+const DEFAULT_CLASS_LABELS = { "A+++": "A+++", "A++": "A++", "A+": "A+", "A": "A", "B": "B", "C": "C", "D": "D", "E": "E", "F": "F", "G": "G" };
+
+const CC_EU = 2.5;
+const EU_TABLE1_ETA_S = { "A+++": 150, "A++": 125, "A+": 98, "A": 90, "B": 82, "C": 75, "D": 36, "E": 34, "F": 30, "G": 0 };
+const EU_TABLE2_ETA_S = { "A+++": 175, "A++": 150, "A+": 123, "A": 115, "B": 107, "C": 100, "D": 61, "E": 59, "F": 55, "G": 0 };
+
+const etaToScopThresholds = (etaMap) => {
+  const out = {};
+  Object.keys(etaMap).forEach((k) => { out[k] = (etaMap[k] * CC_EU) / 100; });
+  return out;
+};
+
+const pickClass = (ratio, thresholdsMap) => {
+  if (!Number.isFinite(ratio) || !thresholdsMap) return null;
+  const entries = Object.entries(thresholdsMap).map(([k, v]) => [k, Number(v)]).filter(([, v]) => Number.isFinite(v)).sort((a, b) => b[1] - a[1]);
+  for (const [cls, thr] of entries) if (ratio >= thr) return cls;
+  return null;
+};
+
+const formatNum = (v, precision) => (v == null || !Number.isFinite(v)) ? "—" : Number(v).toFixed(precision);
+const ENERGY_UNIT_FACTORS = { wh: 0.001, kwh: 1, mwh: 1000 };
+const normalizeEnergyUnit = (unit) => String(unit || "").trim().toLowerCase().replace(/\s+/g, "");
+const parseScaleOverride = (value) => {
+  if (value === "" || value == null) return null;
+  const num = Number(value);
+  return Number.isFinite(num) && num > 0 ? num : null;
+};
+const scaleToKwh = (value, factor) => (value == null || !Number.isFinite(value)) ? value : value * factor;
+
+const PERIODS = [
+  { key: "day", label: "24h", kind: "cop", days: 1, group: "hour" },
+  { key: "week", label: "7d", kind: "cop", days: 7, group: "day" },
+  { key: "month", label: "30d", kind: "cop", daysCfg: "month_days", group: "day" },
+  { key: "year", label: "365d", kind: "scop", daysCfg: "year_days", group: "day" },
+];
+
+const periodStart = (now, cfg, p) => {
+  const oneDayMs = 24 * 60 * 60 * 1000;
+  const days = p.daysCfg ? clampNumber(cfg[p.daysCfg], (p.key === "month" ? 30 : 365)) : p.days;
+  return new Date(now.getTime() - days * oneDayMs);
+};
+
+const sumChangeFromStats = (points) => {
+  if (!Array.isArray(points) || points.length === 0) return null;
+  let hasChange = false, sumChange = 0;
+  for (const p of points) { if (p && p.change != null) { hasChange = true; sumChange += Number(p.change); } }
+  if (hasChange) return sumChange;
+  const first = points[0], last = points[points.length - 1];
+  const a = first?.sum ?? first?.state, b = last?.sum ?? last?.state;
+  const na = Number(a), nb = Number(b);
+  return (Number.isFinite(na) && Number.isFinite(nb)) ? (nb - na) : null;
+};
+
+const DEFAULT_CONFIG = {
+  title: "Tepelné čerpadlo – COP/SCOP", language: "auto",
+  mode: "single", precision: 2, refresh_minutes: 60, month_days: 30, year_days: 365, show_classes: true, colorize_table_classes: true, class_mode: "custom",
+  custom_class_thresholds: { ...DEFAULT_THRESHOLDS_CUSTOM }, class_colors: { ...DEFAULT_CLASS_COLORS }, class_labels: { ...DEFAULT_CLASS_LABELS },
+  categories: [
+    { key: "dhw",     name: "__cat_dhw",     enabled: true, produced_entity: "", consumed_entity: "", aux_entity: "", aux_included: false, produced_scale: null, consumed_scale: null, aux_scale: null },
+    { key: "heating", name: "__cat_heating", enabled: true, produced_entity: "", consumed_entity: "", aux_entity: "", aux_included: false, produced_scale: null, consumed_scale: null, aux_scale: null },
+    { key: "cooling", name: "__cat_cooling", enabled: false, produced_entity: "", consumed_entity: "", aux_entity: "", aux_included: false, produced_scale: null, consumed_scale: null, aux_scale: null },
+    { key: "total",   name: "__cat_total",   enabled: true, produced_entity: "", consumed_entity: "", aux_entity: "", aux_entity2: "", aux_included: false, produced_scale: null, consumed_scale: null, aux_scale: null, aux2_scale: null },
+  ],
+};
+
+// -------------------- CARD --------------------
+class CopScopCard extends LitElement {
+  static get properties() {
+    return { hass: {}, _config: { state: true }, _data: { state: true }, _error: { state: true }, _warning: { state: true }, _loading: { state: true }, _lastFetch: { state: true }, _selectedKey: { state: true }, _w: { state: true } };
+  }
+
+  static getConfigElement() { return document.createElement("cop-scop-card-editor"); }
+  static getStubConfig() { return { ...DEFAULT_CONFIG }; }
+
+  static styles = css`
     :host { display: block; color: var(--primary-text-color); }
     ha-card { overflow: hidden; }
     .card { padding: 16px; }
@@ -37,44 +335,186 @@ const CSC_VERSION="1.4.0";let Lit,__litFromCDN=!1;try{Lit=await import("lit")}ca
     .mTileTop{ display: flex; align-items: center; justify-content: space-between; gap: 10px; }
     .mTileLabel{ font-weight: 700; opacity: 0.8; }
     .mTileVal{ font-size: 1.25rem; font-weight: 900; font-variant-numeric: tabular-nums; }
-  `;constructor(){super(),this._config=null,this._data=null,this._error=null,this._warning=null,this._loading=!1,this._lastFetch=0,this._selectedKey="total",this._w=9999,this.__ro=null}setConfig(e){let a=e||{};this._config={...DEFAULT_CONFIG,...a,custom_class_thresholds:{...DEFAULT_CONFIG.custom_class_thresholds,...a.custom_class_thresholds||{}},class_colors:{...DEFAULT_CONFIG.class_colors,...a.class_colors||{}},class_labels:{...DEFAULT_CONFIG.class_labels,...a.class_labels||{}},categories:Array.isArray(a.categories)?a.categories.map((e,a)=>({...DEFAULT_CONFIG.categories[a]||{},...e})):DEFAULT_CONFIG.categories.map(e=>({...e}))},this._selectedKey=this._getEnabledCategories()[0]?.key||"total",this._loadCache()}_getCacheKey(){return`csc_cache_${(this._config?.title||"default").replace(/\s+/g,"_").toLowerCase()}`}_loadCache(){try{let e=localStorage.getItem(this._getCacheKey());if(e){let a=JSON.parse(e);this._data=a.data,this._lastFetch=a.ts||0}}catch(s){console.warn("[CSC] Cache load error",s)}}_saveCache(e){try{localStorage.setItem(this._getCacheKey(),JSON.stringify({ts:Date.now(),data:e}))}catch(a){console.warn("[CSC] Cache save error",a)}}connectedCallback(){super.connectedCallback(),this.updateComplete.then(()=>{let e=this.renderRoot?.querySelector(".card");e&&!this.__ro&&(this.__ro=new ResizeObserver(e=>{let a=Math.round(e?.[0]?.contentRect?.width||0);a&&a!==this._w&&(this._w=a)}),this.__ro.observe(e))})}disconnectedCallback(){this.__ro?.disconnect(),super.disconnectedCallback()}_getEnabledCategories(){return(this._config?.categories||[]).filter(e=>e&&e.enabled)}_getAllEntityIds(){let e=new Set;for(let a of this._getEnabledCategories())[a.produced_entity,a.consumed_entity,a.aux_entity,a.aux_entity2].forEach(a=>a&&e.add(a));return[...e]}_badge(e,s=!0){if(!e)return i;let o=(this._config?.class_labels||DEFAULT_CLASS_LABELS)[e]||e,l=s?(this._config?.class_colors||DEFAULT_CLASS_COLORS)[e]||"#64dd17":"rgba(255,255,255,0.08)";return a`<span class="badge" style="background:${l}; color:${s?"rgba(0,0,0,0.85)":"var(--primary-text-color)"}; border-color:${s?"transparent":"rgba(255,255,255,0.16)"};">${o}</span>`}_getEntityScaleMeta(e,a){let s=parseScaleOverride(a);if(null!=s)return{factor:s,manual:!0,unit:"kWh"};let i=this.hass?.states?.[e]?.attributes?.unit_of_measurement,o=normalizeEnergyUnit(i);return o&&null!=ENERGY_UNIT_FACTORS[o]?{factor:ENERGY_UNIT_FACTORS[o],manual:!1,unit:i}:{factor:1,manual:!1,unit:i,unsupported:Boolean(i)}}async _fetchIfNeeded(){if(!this.hass||!this._config||this._loading)return;let e=6e4*clampNumber(this._config.refresh_minutes,60);if(this._data&&Date.now()-this._lastFetch<e)return;let a=this._getAllEntityIds();if(0===a.length){this._error=t(this.hass,"missing_cfg",this._config);return}this._loading=!0,this._error=null,this._warning=null;try{let s=new Date,i={},o=new Set;for(let l of PERIODS){let n=await this.hass.callWS({type:"recorder/statistics_during_period",start_time:periodStart(s,this._config,l).toISOString(),end_time:s.toISOString(),statistic_ids:a,period:l.group,types:["change","sum","state"]});i[l.key]={changes:{}},a.forEach(e=>{i[l.key].changes[e]=sumChangeFromStats(n?.[e]||[])})}let r={};for(let c of this._getEnabledCategories()){let d={name:c.name,key:c.key,periods:{}},h=this._getEntityScaleMeta(c.produced_entity,c.produced_scale),u=this._getEntityScaleMeta(c.consumed_entity,c.consumed_scale),g=this._getEntityScaleMeta(c.aux_entity,c.aux_scale),p=this._getEntityScaleMeta(c.aux_entity2,c.aux2_scale);for(let m of([[c.produced_entity,h],[c.consumed_entity,u],[c.aux_entity,g],[c.aux_entity2,p]].forEach(([e,a])=>{e&&a?.unsupported&&o.add(e)}),PERIODS)){let $=i[m.key].changes,f=scaleToKwh($[c.produced_entity],h.factor),y=scaleToKwh($[c.consumed_entity],u.factor),b=scaleToKwh($[c.aux_entity]||0,g.factor),x=scaleToKwh($[c.aux_entity2]||0,p.factor),v=b+x,C=null!=y?c.aux_included?y:y+v:null,_=null!=f&&C>0?f/C:null;d.periods[m.key]={produced_kwh:f,consumed_kwh:y,aux1_kwh:b,aux2_kwh:x,aux_total_kwh:null!=$[c.aux_entity]||null!=$[c.aux_entity2]?v:null,consumed_total_kwh:C,ratio:_,unit:"kWh"}}r[c.key]=d}this._data={categories:r},this._saveCache(this._data),this._warning=o.size?`${t(this.hass,"unit_warning",this._config)} ${Array.from(o).join(", ")}`:null,this._lastFetch=Date.now()}catch(w){this._error=`Error: ${w?.message||w}`}finally{this._loading=!1}}updated(){this._fetchIfNeeded()}_renderTilesForCategory(e){let s=clampNumber(this._config.precision,2),o=this._config.show_classes?"custom"===this._config.class_mode?this._config.custom_class_thresholds:"eu_space_heating"===this._config.class_mode?etaToScopThresholds(EU_TABLE1_ETA_S):etaToScopThresholds(EU_TABLE2_ETA_S):null;return a`
+  `;
+
+  constructor() { super(); this._config = null; this._data = null; this._error = null; this._warning = null; this._loading = false; this._lastFetch = 0; this._selectedKey = "total"; this._w = 9999; this.__ro = null; }
+
+  setConfig(config) {
+    const cfg = config || {};
+    this._config = {
+      ...DEFAULT_CONFIG, ...cfg,
+      custom_class_thresholds: { ...DEFAULT_CONFIG.custom_class_thresholds, ...(cfg.custom_class_thresholds || {}) },
+      class_colors: { ...DEFAULT_CONFIG.class_colors, ...(cfg.class_colors || {}) },
+      class_labels: { ...DEFAULT_CONFIG.class_labels, ...(cfg.class_labels || {}) },
+      categories: Array.isArray(cfg.categories) ? cfg.categories.map((c, i) => ({ ...(DEFAULT_CONFIG.categories[i] || {}), ...c })) : DEFAULT_CONFIG.categories.map((c) => ({ ...c })),
+    };
+    this._selectedKey = (this._getEnabledCategories()[0]?.key) || "total";
+    this._loadCache();
+  }
+
+  _getCacheKey() { return `csc_cache_${(this._config?.title || "default").replace(/\s+/g, '_').toLowerCase()}`; }
+  _loadCache() {
+    try {
+      const cached = localStorage.getItem(this._getCacheKey());
+      if (cached) { const parsed = JSON.parse(cached); this._data = parsed.data; this._lastFetch = parsed.ts || 0; }
+    } catch (e) { console.warn("[CSC] Cache load error", e); }
+  }
+  _saveCache(data) { try { localStorage.setItem(this._getCacheKey(), JSON.stringify({ ts: Date.now(), data })); } catch (e) { console.warn("[CSC] Cache save error", e); } }
+
+  connectedCallback() {
+    super.connectedCallback();
+    this.updateComplete.then(() => {
+      const host = this.renderRoot?.querySelector(".card");
+      if (!host || this.__ro) return;
+      this.__ro = new ResizeObserver((entries) => { const w = Math.round(entries?.[0]?.contentRect?.width || 0); if (w && w !== this._w) this._w = w; });
+      this.__ro.observe(host);
+    });
+  }
+
+  disconnectedCallback() { this.__ro?.disconnect(); super.disconnectedCallback(); }
+
+  _getEnabledCategories() { return (this._config?.categories || []).filter((c) => c && c.enabled); }
+  _getAllEntityIds() {
+    const ids = new Set();
+    for (const c of this._getEnabledCategories()) { [c.produced_entity, c.consumed_entity, c.aux_entity, c.aux_entity2].forEach(id => id && ids.add(id)); }
+    return [...ids];
+  }
+
+  _badge(cls, colorize = true) {
+    if (!cls) return nothing;
+    const label = (this._config?.class_labels || DEFAULT_CLASS_LABELS)[cls] || cls;
+    const bg = colorize ? ((this._config?.class_colors || DEFAULT_CLASS_COLORS)[cls] || "#64dd17") : "rgba(255,255,255,0.08)";
+    return html`<span class="badge" style="background:${bg}; color:${colorize ? "rgba(0,0,0,0.85)" : "var(--primary-text-color)"}; border-color:${colorize ? "transparent" : "rgba(255,255,255,0.16)"};">${label}</span>`;
+  }
+
+  _getEntityScaleMeta(entityId, override) {
+    const manualFactor = parseScaleOverride(override);
+    if (manualFactor != null) return { factor: manualFactor, manual: true, unit: "kWh" };
+
+    const unit = this.hass?.states?.[entityId]?.attributes?.unit_of_measurement;
+    const normalizedUnit = normalizeEnergyUnit(unit);
+    if (normalizedUnit && ENERGY_UNIT_FACTORS[normalizedUnit] != null) {
+      return { factor: ENERGY_UNIT_FACTORS[normalizedUnit], manual: false, unit };
+    }
+
+    return { factor: 1, manual: false, unit, unsupported: Boolean(unit) };
+  }
+
+  async _fetchIfNeeded() {
+    if (!this.hass || !this._config || this._loading) return;
+    const refreshMs = clampNumber(this._config.refresh_minutes, 60) * 60 * 1000;
+    if (this._data && (Date.now() - this._lastFetch) < refreshMs) return;
+
+    const ids = this._getAllEntityIds();
+    if (ids.length === 0) { this._error = t(this.hass, "missing_cfg", this._config); return; }
+    
+    this._loading = true; this._error = null; this._warning = null;
+    try {
+      const now = new Date();
+      const resultsByPeriod = {};
+      const warnings = new Set();
+      for (const p of PERIODS) {
+        const resp = await this.hass.callWS({ type: "recorder/statistics_during_period", start_time: periodStart(now, this._config, p).toISOString(), end_time: now.toISOString(), statistic_ids: ids, period: p.group, types: ["change", "sum", "state"] });
+        resultsByPeriod[p.key] = { changes: {} };
+        ids.forEach(id => { resultsByPeriod[p.key].changes[id] = sumChangeFromStats(resp?.[id] || []); });
+      }
+
+      const categories = {};
+      for (const c of this._getEnabledCategories()) {
+        const cat = { name: c.name, key: c.key, periods: {} };
+        const producedMeta = this._getEntityScaleMeta(c.produced_entity, c.produced_scale);
+        const consumedMeta = this._getEntityScaleMeta(c.consumed_entity, c.consumed_scale);
+        const aux1Meta = this._getEntityScaleMeta(c.aux_entity, c.aux_scale);
+        const aux2Meta = this._getEntityScaleMeta(c.aux_entity2, c.aux2_scale);
+        [[c.produced_entity, producedMeta], [c.consumed_entity, consumedMeta], [c.aux_entity, aux1Meta], [c.aux_entity2, aux2Meta]].forEach(([entityId, meta]) => {
+          if (entityId && meta?.unsupported) warnings.add(entityId);
+        });
+        for (const p of PERIODS) {
+          const res = resultsByPeriod[p.key].changes;
+          const prod = scaleToKwh(res[c.produced_entity], producedMeta.factor);
+          const consMain = scaleToKwh(res[c.consumed_entity], consumedMeta.factor);
+          const aux1 = scaleToKwh(res[c.aux_entity] || 0, aux1Meta.factor);
+          const aux2 = scaleToKwh(res[c.aux_entity2] || 0, aux2Meta.factor);
+          const auxTotal = aux1 + aux2;
+
+          const totalConsForCalc = (consMain != null) ? (c.aux_included ? consMain : (consMain + auxTotal)) : null;
+          const ratio = (prod != null && totalConsForCalc > 0) ? (prod / totalConsForCalc) : null;
+
+          cat.periods[p.key] = { produced_kwh: prod, consumed_kwh: consMain, aux1_kwh: aux1, aux2_kwh: aux2, aux_total_kwh: (res[c.aux_entity] != null || res[c.aux_entity2] != null) ? auxTotal : null, consumed_total_kwh: totalConsForCalc, ratio, unit: "kWh" };
+        }
+        categories[c.key] = cat;
+      }
+      this._data = { categories };
+      this._saveCache(this._data);
+      this._warning = warnings.size ? `${t(this.hass, "unit_warning", this._config)} ${Array.from(warnings).join(", ")}` : null;
+      this._lastFetch = Date.now();
+    } catch (e) { this._error = `Error: ${e?.message || e}`; } finally { this._loading = false; }
+  }
+
+  updated() { this._fetchIfNeeded(); }
+
+  _renderTilesForCategory(cat) {
+    const prec = clampNumber(this._config.precision, 2);
+    const thresholds = (this._config.show_classes ? (this._config.class_mode === "custom" ? this._config.custom_class_thresholds : (this._config.class_mode === "eu_space_heating" ? etaToScopThresholds(EU_TABLE1_ETA_S) : etaToScopThresholds(EU_TABLE2_ETA_S))) : null);
+    
+    return html`
       <div class="grid">
-        ${PERIODS.map(l=>{let n=e?.periods?.[l.key]||{};return a`
+        ${PERIODS.map((p) => {
+          const m = cat?.periods?.[p.key] || {};
+          return html`
             <div class="tile">
-              <div class="tileTop"><div class="tileLabel">${("scop"===l.kind?"SCOP ":"COP ")+l.label}</div>${o?this._badge(pickClass(n.ratio,o),!0):i}</div>
-              <div class="value">${formatNum(n.ratio,s)}</div>
+              <div class="tileTop"><div class="tileLabel">${(p.kind === "scop" ? "SCOP " : "COP ") + p.label}</div>${thresholds ? this._badge(pickClass(m.ratio, thresholds), true) : nothing}</div>
+              <div class="value">${formatNum(m.ratio, prec)}</div>
               <div class="meta">
-                <div class="metaRow"><div>${t(this.hass,"produced",this._config)}:</div><div class="muted">${formatNum(n.produced_kwh,2)} ${n.unit||"kWh"}</div></div>
-                <div class="metaRow"><div>${t(this.hass,"consumed",this._config)}:</div><div class="muted">${formatNum(n.consumed_kwh,2)} ${n.unit||"kWh"}</div></div>
-                ${null!=n.aux_total_kwh?a`
-                  ${"total"===e.key?a`
-                    <div class="metaRow"><div>${t(this.hass,"aux_from",this._config)} (Top):</div><div class="muted">${formatNum(n.aux1_kwh,2)} ${n.unit||"kWh"}</div></div>
-                    <div class="metaRow"><div>${t(this.hass,"aux_from",this._config)} (TUV):</div><div class="muted">${formatNum(n.aux2_kwh,2)} ${n.unit||"kWh"}</div></div>
-                  `:a`<div class="metaRow"><div>${t(this.hass,"aux_from",this._config)}:</div><div class="muted">${formatNum(n.aux_total_kwh,2)} ${n.unit||"kWh"}</div></div>`}
-                  <div class="metaRow"><div>${t(this.hass,"total_consumed",this._config)}:</div><div class="muted">${formatNum(n.consumed_total_kwh,2)} ${n.unit||"kWh"}</div></div>
-                `:i}
+                <div class="metaRow"><div>${t(this.hass, "produced", this._config)}:</div><div class="muted">${formatNum(m.produced_kwh, 2)} ${m.unit || "kWh"}</div></div>
+                <div class="metaRow"><div>${t(this.hass, "consumed", this._config)}:</div><div class="muted">${formatNum(m.consumed_kwh, 2)} ${m.unit || "kWh"}</div></div>
+                ${m.aux_total_kwh != null ? html`
+                  ${cat.key === "total" ? html`
+                    <div class="metaRow"><div>${t(this.hass, "aux_from", this._config)} (${t(this.hass, "aux_heating", this._config)}):</div><div class="muted">${formatNum(m.aux1_kwh, 2)} ${m.unit || "kWh"}</div></div>
+                    <div class="metaRow"><div>${t(this.hass, "aux_from", this._config)} (${t(this.hass, "aux_dhw", this._config)}):</div><div class="muted">${formatNum(m.aux2_kwh, 2)} ${m.unit || "kWh"}</div></div>
+                  ` : html`<div class="metaRow"><div>${t(this.hass, "aux_from", this._config)}:</div><div class="muted">${formatNum(m.aux_total_kwh, 2)} ${m.unit || "kWh"}</div></div>`}
+                  <div class="metaRow"><div>${t(this.hass, "total_consumed", this._config)}:</div><div class="muted">${formatNum(m.consumed_total_kwh, 2)} ${m.unit || "kWh"}</div></div>
+                ` : nothing}
               </div>
             </div>
-          `})}
+          `;
+        })}
       </div>
-    `}render(){if(!this._config)return i;let e=this._getEnabledCategories(),s="single"===this._config.mode?this._data?.categories?.[this._selectedKey]||this._data?.categories?.[e?.[0]?.key]:null,o=this._config.show_classes?"custom"===this._config.class_mode?this._config.custom_class_thresholds:"eu_space_heating"===this._config.class_mode?etaToScopThresholds(EU_TABLE1_ETA_S):etaToScopThresholds(EU_TABLE2_ETA_S):null;return a`
+    `;
+  }
+
+  render() {
+    if (!this._config) return nothing;
+    const enabled = this._getEnabledCategories();
+    const cat = (this._config.mode === "single") ? (this._data?.categories?.[this._selectedKey] || this._data?.categories?.[enabled?.[0]?.key]) : null;
+    const thresholds = (this._config.show_classes ? (this._config.class_mode === "custom" ? this._config.custom_class_thresholds : (this._config.class_mode === "eu_space_heating" ? etaToScopThresholds(EU_TABLE1_ETA_S) : etaToScopThresholds(EU_TABLE2_ETA_S))) : null);
+
+    return html`
       <ha-card>
         <div class="card">
-          <div class="header"><div class="title">${this._config.title}</div><div class="muted">${this._loading?t(this.hass,"loading",this._config):""}</div></div>
-          ${"single"===this._config.mode&&e.length>1?a`<div class="row"><div>${t(this.hass,"category",this._config)}:</div><select @change=${e=>this._selectedKey=e.target.value} .value=${this._selectedKey}>${e.map(e=>a`<option value=${e.key}>${e.name}</option>`)}</select></div>`:i}
-          ${"single"===this._config.mode?s?this._renderTilesForCategory(s):i:a`
+          <div class="header"><div class="title">${this._config.title}</div><div class="muted">${this._loading ? t(this.hass, "loading", this._config) : ""}</div></div>
+          ${(this._config.mode === "single" && enabled.length > 1) ? html`<div class="row"><div>${t(this.hass, "category", this._config)}:</div><select @change=${(e) => this._selectedKey = e.target.value} .value=${this._selectedKey}>${enabled.map(c => html`<option value=${c.key}>${resolveName(this.hass, this._config, c.name)}</option>`)}</select></div>` : nothing}
+          ${this._config.mode === "single" ? (cat ? this._renderTilesForCategory(cat) : nothing) : html`
             <div class="tableWrap">
               <table class="table">
-                <thead><tr><th class="colCat">${t(this.hass,"category",this._config)}</th>${PERIODS.map(e=>a`<th class="colPeriodHeader" colspan="2">${("scop"===e.kind?"SCOP ":"COP ")+e.label}</th>`)}</tr></thead>
-                <tbody>${e.map(e=>{let s=this._data?.categories?.[e.key];return a`<tr><td>${e.name}</td>${PERIODS.map(e=>a`<td class="colVal"><span class="cellVal">${formatNum(s?.periods?.[e.key]?.ratio,this._config.precision)}</span></td><td class="colCls"><span class="badgeCell">${o?this._badge(pickClass(s?.periods?.[e.key]?.ratio,o),!!this._config.colorize_table_classes):i}</span></td>`)}</tr>`})}</tbody>
+                <thead><tr><th class="colCat">${t(this.hass, "category", this._config)}</th>${PERIODS.map(p => html`<th class="colPeriodHeader" colspan="2">${(p.kind === "scop" ? "SCOP " : "COP ") + p.label}</th>`)}</tr></thead>
+                <tbody>${enabled.map(c => { const m = this._data?.categories?.[c.key]; return html`<tr><td>${resolveName(this.hass, this._config, c.name)}</td>${PERIODS.map(p => html`<td class="colVal"><span class="cellVal">${formatNum(m?.periods?.[p.key]?.ratio, this._config.precision)}</span></td><td class="colCls"><span class="badgeCell">${thresholds ? this._badge(pickClass(m?.periods?.[p.key]?.ratio, thresholds), !!this._config.colorize_table_classes) : nothing}</span></td>`)}</tr>`; })}</tbody>
               </table>
             </div>
           `}
-          ${this._warning?a`<div class="err">${this._warning}</div>`:i}
-          ${this._error?a`<div class="err">${this._error}</div>`:i}
+          ${this._warning ? html`<div class="err">${this._warning}</div>` : nothing}
+          ${this._error ? html`<div class="err">${this._error}</div>` : nothing}
         </div>
       </ha-card>
-    `}}customElements.define("cop-scop-card",CopScopCard);class CopScopCardEditor extends e{static get properties(){return{hass:{},_config:{state:!0}}}static styles=s`
+    `;
+  }
+}
+customElements.define("cop-scop-card", CopScopCard);
+
+// -------------------- EDITOR --------------------
+class CopScopCardEditor extends LitElement {
+  static get properties() { return { hass: {}, _config: { state: true } }; }
+  static styles = css`
     :host { display:block; padding: 8px 0; }
     .wrap { display: grid; gap: 12px; }
     .box { border: 1px solid var(--divider-color); border-radius: 14px; padding: 12px; background: rgba(255,255,255,0.02); }
@@ -84,22 +524,75 @@ const CSC_VERSION="1.4.0";let Lit,__litFromCDN=!1;try{Lit=await import("lit")}ca
     .catBox { padding-top: 8px; }
     .rowLine { display:flex; align-items:center; gap: 10px; }
     .badgePreview{ width: 100%; display:flex; justify-content:flex-end; align-items:center; gap: 10px; }
-  `;setConfig(e){this._config={...DEFAULT_CONFIG,...e}}_setThreshold(e,a){let s={...this._config,custom_class_thresholds:{...this._config.custom_class_thresholds,[e]:clampNumber(a,0)}};fireEvent(this,"config-changed",{config:s})}_setCategory(e,a){let s=[...this._config.categories];s[e]={...s[e],...a},fireEvent(this,"config-changed",{config:{...this._config,categories:s}})}render(){return this.hass&&this._config?a`
+  `;
+
+  setConfig(config) { this._config = { ...DEFAULT_CONFIG, ...config }; }
+
+  _setThreshold(cls, val) { const cfg = { ...this._config, custom_class_thresholds: { ...this._config.custom_class_thresholds, [cls]: clampNumber(val, 0) } }; fireEvent(this, "config-changed", { config: cfg }); }
+  _setCategory(idx, patch) {
+    const cats = [...this._config.categories];
+    const existing = cats[idx];
+    const merged = { ...existing, ...patch };
+    if (!merged.name || merged.name.trim() === "") merged.name = "__cat_" + existing.key;
+    cats[idx] = merged;
+    fireEvent(this, "config-changed", { config: { ...this._config, categories: cats } });
+  }
+
+  render() {
+    if (!this.hass || !this._config) return nothing;
+    const classKeys = ["A+++","A++","A+","A","B","C","D","E","F","G"];
+    return html`
       <div class="wrap">
         <div class="box">
-          <div class="head">${t(this.hass,"display",this._config)}</div>
-          <ha-form .hass=${this.hass} .data=${this._config} .schema=${[{name:"title",selector:{text:{}}},{name:"language",selector:{select:{mode:"dropdown",options:[{value:"auto",label:t(this.hass,"lang_auto",this._config)},{value:"cs",label:t(this.hass,"lang_cs",this._config)},{value:"en",label:t(this.hass,"lang_en",this._config)}]}}},{name:"mode",selector:{select:{mode:"dropdown",options:[{value:"single",label:t(this.hass,"mode_single",this._config)},{value:"table",label:t(this.hass,"mode_table",this._config)}]}}},{name:"precision",selector:{number:{min:0,max:4,step:1,mode:"box"}}},{name:"refresh_minutes",selector:{number:{min:5,max:240,step:5,mode:"box"}}},{name:"show_classes",selector:{boolean:{}}},{name:"colorize_table_classes",selector:{boolean:{}}},{name:"class_mode",selector:{select:{mode:"dropdown",options:[{value:"none",label:t(this.hass,"class_none",this._config)},{value:"custom",label:t(this.hass,"class_custom",this._config)},{value:"eu_space_heating",label:t(this.hass,"class_eu",this._config)},{value:"eu_space_heating_lowtemp",label:t(this.hass,"class_eu_lt",this._config)}]}}},]} @value-changed=${e=>fireEvent(this,"config-changed",{config:e.detail.value})}></ha-form>
+          <div class="head">${t(this.hass, "display", this._config)}</div>
+          <ha-form .hass=${this.hass} .data=${this._config} .schema=${[
+            { name: "title",                  label: t(this.hass, "title",          this._config), selector: { text: {} } },
+            { name: "language",               label: t(this.hass, "language",       this._config), selector: { select: { mode: "dropdown", options: [
+              { value: "auto", label: t(this.hass, "lang_auto", this._config) },
+              { value: "de",   label: t(this.hass, "lang_de",   this._config) },
+              { value: "cs",   label: t(this.hass, "lang_cs",   this._config) },
+              { value: "en",   label: t(this.hass, "lang_en",   this._config) },
+            ] } } },
+            { name: "mode",                   label: t(this.hass, "mode_label",     this._config), selector: { select: { mode: "dropdown", options: [{ value: "single", label: t(this.hass, "mode_single", this._config) }, { value: "table", label: t(this.hass, "mode_table", this._config) }] } } },
+            { name: "precision",              label: t(this.hass, "precision",      this._config), selector: { number: { min: 0, max: 4, step: 1, mode: "box" } } },
+            { name: "refresh_minutes",        label: t(this.hass, "refresh",        this._config), selector: { number: { min: 5, max: 240, step: 5, mode: "box" } } },
+            { name: "show_classes",           label: t(this.hass, "show_class",     this._config), selector: { boolean: {} } },
+            { name: "colorize_table_classes", label: t(this.hass, "colorize_table", this._config), selector: { boolean: {} } },
+            { name: "class_mode",             label: t(this.hass, "class_mode",     this._config), selector: { select: { mode: "dropdown", options: [{ value: "none", label: t(this.hass, "class_none", this._config) }, { value: "custom", label: t(this.hass, "class_custom", this._config) }, { value: "eu_space_heating", label: t(this.hass, "class_eu", this._config) }, { value: "eu_space_heating_lowtemp", label: t(this.hass, "class_eu_lt", this._config) }] } } },
+          ]} @value-changed=${(e) => fireEvent(this, "config-changed", { config: e.detail.value })}></ha-form>
         </div>
-        ${this._config.show_classes&&"custom"===this._config.class_mode?a`<div class="box"><div class="head">${t(this.hass,"thresholds",this._config)}</div><div class="grid3">${["A+++","A++","A+","A","B","C","D","E","F","G"].map(e=>a`<ha-number-input .label=${e} .value=${this._config.custom_class_thresholds[e]} .min=${0} .max=${20} .step=${.01} @value-changed=${a=>this._setThreshold(e,a.detail.value)}></ha-number-input>`)}</div></div>`:i}
+        ${(this._config.class_mode === "custom") ? html`<div class="box"><div class="head">${t(this.hass, "thresholds", this._config)}</div><div class="grid3">${classKeys.map(k => html`<ha-number-input .label=${k} .value=${this._config.custom_class_thresholds[k]} .min=${0} .max=${20} .step=${0.01} @value-changed=${(e) => this._setThreshold(k, e.detail.value)}></ha-number-input>`)}</div></div>` : nothing}
         <div class="box">
-          <div class="head">${t(this.hass,"category",this._config)}</div>
-          ${(this._config.categories||[]).map((e,s)=>a`
+          <div class="head">${t(this.hass, "category", this._config)}</div>
+          ${(this._config.categories || []).map((c, idx) => {
+            const isDefaultName = c.name && c.name.startsWith("__cat_");
+            const formData = { ...c, name: isDefaultName ? "" : (c.name || "") };
+            const namePlaceholder = resolveName(this.hass, this._config, "__cat_" + c.key);
+            return html`
             <div class="catBox">
-              <b>${e.key.toUpperCase()}</b>
-              <ha-form .hass=${this.hass} .data=${e} .schema=${[{name:"name",label:t(this.hass,"name",this._config),selector:{text:{}}},{name:"enabled",label:t(this.hass,"enabled",this._config),selector:{boolean:{}}},{name:"produced_entity",label:t(this.hass,"produced_entity",this._config),selector:{entity:{}}},{name:"consumed_entity",label:t(this.hass,"consumed_entity",this._config),selector:{entity:{}}},{name:"produced_scale",label:t(this.hass,"produced_scale",this._config),selector:{number:{min:1e-6,max:1e6,step:1e-6,mode:"box"}}},{name:"consumed_scale",label:t(this.hass,"consumed_scale",this._config),selector:{number:{min:1e-6,max:1e6,step:1e-6,mode:"box"}}},{name:"aux_entity",label:t(this.hass,"add_aux",this._config),selector:{entity:{}}},{name:"aux_scale",label:t(this.hass,"aux_scale",this._config),selector:{number:{min:1e-6,max:1e6,step:1e-6,mode:"box"}}},..."total"===e.key?[{name:"aux_entity2",label:t(this.hass,"add_aux2",this._config),selector:{entity:{}}}]:[],..."total"===e.key?[{name:"aux2_scale",label:t(this.hass,"aux2_scale",this._config),selector:{number:{min:1e-6,max:1e6,step:1e-6,mode:"box"}}}]:[],{name:"aux_included",label:t(this.hass,"aux_included",this._config),selector:{boolean:{}}},]} @value-changed=${e=>this._setCategory(s,e.detail.value)}></ha-form>
+              <b>${c.key.toUpperCase()} — ${resolveName(this.hass, this._config, c.name)}</b>
+              <ha-form .hass=${this.hass} .data=${formData} .schema=${[
+                { name: "name", label: t(this.hass, "name", this._config), selector: { text: { placeholder: namePlaceholder } } },
+                { name: "enabled", label: t(this.hass, "enabled", this._config), selector: { boolean: {} } },
+                { name: "produced_entity", label: t(this.hass, "produced_entity", this._config), selector: { entity: { device_class: "energy" } } },
+                { name: "consumed_entity", label: t(this.hass, "consumed_entity", this._config), selector: { entity: { device_class: "energy" } } },
+                { name: "produced_scale", label: t(this.hass, "produced_scale", this._config), selector: { number: { min: 0.000001, max: 1000000, step: 0.000001, mode: "box" } } },
+                { name: "consumed_scale", label: t(this.hass, "consumed_scale", this._config), selector: { number: { min: 0.000001, max: 1000000, step: 0.000001, mode: "box" } } },
+                { name: "aux_entity", label: t(this.hass, "add_aux", this._config), selector: { entity: { device_class: "energy" } } },
+                { name: "aux_scale", label: t(this.hass, "aux_scale", this._config), selector: { number: { min: 0.000001, max: 1000000, step: 0.000001, mode: "box" } } },
+                ...(c.key === "total" ? [{ name: "aux_entity2", label: t(this.hass, "add_aux2", this._config), selector: { entity: { device_class: "energy" } } }] : []),
+                ...(c.key === "total" ? [{ name: "aux2_scale", label: t(this.hass, "aux2_scale", this._config), selector: { number: { min: 0.000001, max: 1000000, step: 0.000001, mode: "box" } } }] : []),
+                { name: "aux_included", label: t(this.hass, "aux_included", this._config), selector: { boolean: {} } },
+              ]} @value-changed=${(e) => this._setCategory(idx, e.detail.value)}></ha-form>
               <div class="hr"></div>
             </div>
-          `)}
+          `; })}
         </div>
       </div>
-    `:i}}customElements.define("cop-scop-card-editor",CopScopCardEditor),window.customCards=window.customCards||[],window.customCards.push({type:"cop-scop-card",name:"COP/SCOP Card",description:"COP/SCOP statistics with local caching and aux heater settings.",preview:!0});
+    `;
+  }
+}
+customElements.define("cop-scop-card-editor", CopScopCardEditor);
+
+window.customCards = window.customCards || [];
+window.customCards.push({ type: "cop-scop-card", name: "COP/SCOP Card", description: "COP/SCOP statistics with local caching and aux heater settings.", preview: true });
